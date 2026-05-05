@@ -1,1 +1,36 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"padel-score-ab0b5","appId":"1:172981973758:android:a756011501b47118b82baf","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"padel-score-ab0b5","configurations":{"android":"1:172981973758:android:a756011501b47118b82baf","ios":"1:172981973758:ios:c725e14684e82c64b82baf","web":"1:172981973758:web:fe49e63e6800970fb82baf"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|wasm)",
+        "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "padel-score-ab0b5",
+          "appId": "1:172981973758:android:a756011501b47118b82baf",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "padel-score-ab0b5",
+          "configurations": {
+            "android": "1:172981973758:android:a756011501b47118b82baf",
+            "ios": "1:172981973758:ios:c725e14684e82c64b82baf",
+            "web": "1:172981973758:web:fe49e63e6800970fb82baf"
+          }
+        }
+      }
+    }
+  }
+}

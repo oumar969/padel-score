@@ -65,6 +65,14 @@ Følg vejledningen i [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
 flutter run
 ```
 
+## Deploy
+
+```bash
+flutter build web --release && firebase deploy --only hosting --project padel-score-ab0b5
+```
+
+Live: https://padel-score-ab0b5.web.app
+
 ## IoT (kommer snart)
 
 ESP32 med fysisk knap eller stemmestyring → giver point direkte til Firebase uden at røre telefonen.
