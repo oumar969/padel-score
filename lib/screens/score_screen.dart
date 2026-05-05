@@ -249,14 +249,22 @@ class _TeamPanel extends StatelessWidget {
             // Serve indicator
             if (isServing)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('🎾', style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 4),
-                  Text('SERVE', style: GoogleFonts.inter(
-                      fontSize: 10, fontWeight: FontWeight.w800,
-                      letterSpacing: 2, color: color.withValues(alpha: 0.7))),
-                ]),
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('🎾', style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 8),
+                    Text('SERVE', style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w800,
+                        letterSpacing: 2, color: color)),
+                  ]),
+                ),
               ),
 
             // Team name
