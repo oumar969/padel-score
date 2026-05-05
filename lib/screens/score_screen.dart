@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app/theme.dart';
+import '../models/comment_model.dart';
 import '../models/match_model.dart';
 import '../providers/match_provider.dart';
 
@@ -484,14 +485,15 @@ class _CommentsFab extends ConsumerWidget {
       backgroundColor: surfaceColor,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _CommentsSheet(match: match),
+      builder: (_) => _CommentsSheet(match: match, isOwner: isOwner),
     );
   }
 }
 
 class _CommentsSheet extends ConsumerStatefulWidget {
   final PadelMatch match;
-  const _CommentsSheet({required this.match});
+  final bool isOwner;
+  const _CommentsSheet({required this.match, required this.isOwner});
 
   @override
   ConsumerState<_CommentsSheet> createState() => _CommentsSheetState();
@@ -500,16 +502,22 @@ class _CommentsSheet extends ConsumerStatefulWidget {
 class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
+  String? _replyingToId; // comment id being replied to
 
-  final _quickReactions = ['🔥 Nice shot!', '💪 Let\'s go!', '😮 Wow!', '👏 Godt spillet!'];
+  final _quickReactions = ['🔥 Nice shot!', '💪 Let\'s go!', '😮 Wow!', '👏 Godt spillet!', '😂 Haha!'];
 
   @override
   void dispose() { _ctrl.dispose(); _scroll.dispose(); super.dispose(); }
 
-  Future<void> _send(String text) async {
+  Future<void> _send(String text, {bool isReply = false, String? replyToId}) async {
     if (text.trim().isEmpty) return;
     _ctrl.clear();
-    await ref.read(matchActionsProvider).addComment(widget.match.id, text.trim());
+    setState(() => _replyingToId = null);
+    await ref.read(matchActionsProvider).addComment(
+      widget.match.id, text.trim(),
+      isOwnerReply: isReply,
+      replyToId: replyToId,
+    );
     if (_scroll.hasClients && _scroll.position.hasContentDimensions) {
       _scroll.animateTo(_scroll.position.maxScrollExtent + 60,
           duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
@@ -518,7 +526,11 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isOwner = widget.isOwner;
     final comments = ref.watch(commentsProvider(widget.match.id)).valueOrNull ?? [];
+    // Top-level comments only (no replies in main list)
+    final topLevel = comments.where((c) => c.replyToId == null).toList();
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -529,112 +541,263 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
         Container(
           margin: const EdgeInsets.only(top: 10, bottom: 8),
           width: 36, height: 4,
-          decoration: BoxDecoration(
-              color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
         ),
+
+        // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
           child: Row(children: [
             Text('💬  Kommentarer', style: GoogleFonts.inter(
                 fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
             const Spacer(),
-            Text('${comments.length}', style: GoogleFonts.inter(
-                fontSize: 14, color: Colors.white38)),
+            if (isOwner)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: team1Color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('SPILLER', style: GoogleFonts.inter(
+                    fontSize: 10, fontWeight: FontWeight.w700,
+                    letterSpacing: 1, color: team1Color)),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: team2Color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('TILSKUER', style: GoogleFonts.inter(
+                    fontSize: 10, fontWeight: FontWeight.w700,
+                    letterSpacing: 1, color: team2Color)),
+              ),
           ]),
         ),
         const Divider(height: 1, color: Color(0xFF2A2A40)),
 
-        // Quick reactions
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(children: _quickReactions.map((r) => GestureDetector(
-            onTap: () => _send(r),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: cardColor, borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: dividerColor),
+        // Quick reactions — kun tilskuere
+        if (!isOwner)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: _quickReactions.map((r) => GestureDetector(
+              onTap: () => _send(r),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: cardColor, borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: dividerColor),
+                ),
+                child: Text(r, style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
               ),
-              child: Text(r, style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
-            ),
-          )).toList()),
-        ),
+            )).toList()),
+          ),
+
+        // Info til ejer
+        if (isOwner && topLevel.isEmpty)
+          const SizedBox(height: 8),
+        if (isOwner && topLevel.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('Tryk "Svar" for at svare på en kommentar',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white24)),
+          ),
 
         // Comment list
         Expanded(
-          child: comments.isEmpty
-              ? Center(child: Text('Ingen kommentarer endnu',
+          child: topLevel.isEmpty
+              ? Center(child: Text(
+                  isOwner ? 'Ingen kommentarer endnu' : 'Vær den første til at kommentere!',
                   style: GoogleFonts.inter(color: Colors.white24, fontSize: 14)))
               : ListView.builder(
                   controller: scrollCtrl,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: comments.length,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  itemCount: topLevel.length,
                   itemBuilder: (_, i) {
-                    final c = comments[i];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Container(
-                          width: 32, height: 32,
-                          decoration: BoxDecoration(
-                            color: team1Color.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.person_rounded, size: 16, color: team1Color),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: cardColor, borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: dividerColor),
-                            ),
-                            child: Text(c.text, style: GoogleFonts.inter(
-                                fontSize: 14, color: Colors.white)),
-                          ),
-                        ),
-                      ]),
+                    final c = topLevel[i];
+                    final replies = comments.where((r) => r.replyToId == c.id).toList();
+                    return _CommentTile(
+                      comment: c,
+                      replies: replies,
+                      isOwner: isOwner,
+                      isReplying: _replyingToId == c.id,
+                      onReply: isOwner
+                          ? () => setState(() {
+                                _replyingToId = c.id;
+                                _ctrl.clear();
+                              })
+                          : null,
                     );
                   }),
         ),
 
-        // Input
+        // Input — tilskuere skriver nyt, ejer svarer
         SafeArea(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(
-                16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 8),
-            child: Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _ctrl,
-                  style: GoogleFonts.inter(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Skriv en kommentar...',
-                    hintStyle: GoogleFonts.inter(color: Colors.white38),
-                    filled: true, fillColor: cardColor,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onSubmitted: _send,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                style: IconButton.styleFrom(
-                    backgroundColor: team1Color, foregroundColor: Colors.white),
-                icon: const Icon(Icons.send_rounded, size: 18),
-                onPressed: () => _send(_ctrl.text),
-              ),
-            ]),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 8),
+            child: !isOwner
+                ? _TextInput(
+                    ctrl: _ctrl,
+                    hint: 'Skriv en kommentar...',
+                    onSend: (t) => _send(t),
+                  )
+                : _replyingToId != null
+                    ? Column(mainAxisSize: MainAxisSize.min, children: [
+                        Row(children: [
+                          const Icon(Icons.reply_rounded, size: 14, color: Colors.white38),
+                          const SizedBox(width: 4),
+                          Text('Svarer...', style: GoogleFonts.inter(
+                              fontSize: 12, color: Colors.white38)),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => setState(() { _replyingToId = null; _ctrl.clear(); }),
+                            child: const Icon(Icons.close_rounded, size: 16, color: Colors.white38),
+                          ),
+                        ]),
+                        const SizedBox(height: 6),
+                        _TextInput(
+                          ctrl: _ctrl,
+                          hint: 'Dit svar...',
+                          onSend: (t) => _send(t, isReply: true, replyToId: _replyingToId),
+                          accentColor: team1Color,
+                        ),
+                      ])
+                    : const SizedBox.shrink(),
           ),
         ),
       ]),
     );
+  }
+}
+
+class _CommentTile extends StatelessWidget {
+  final MatchComment comment;
+  final List<MatchComment> replies;
+  final bool isOwner;
+  final bool isReplying;
+  final VoidCallback? onReply;
+
+  const _CommentTile({
+    required this.comment,
+    required this.replies,
+    required this.isOwner,
+    required this.isReplying,
+    this.onReply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Comment bubble
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: team2Color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: const Icon(Icons.person_rounded, size: 16, color: team2Color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cardColor, borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: dividerColor),
+                ),
+                child: Text(comment.text, style: GoogleFonts.inter(
+                    fontSize: 14, color: Colors.white)),
+              ),
+              if (isOwner && !isReplying)
+                GestureDetector(
+                  onTap: onReply,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4),
+                    child: Text('Svar', style: GoogleFonts.inter(
+                        fontSize: 12, fontWeight: FontWeight.w600, color: team1Color)),
+                  ),
+                ),
+            ]),
+          ),
+        ]),
+
+        // Replies
+        if (replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 42, top: 6),
+            child: Column(children: replies.map((r) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 26, height: 26,
+                  decoration: BoxDecoration(
+                    color: team1Color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.sports_tennis_rounded, size: 13, color: team1Color),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: team1Color.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: team1Color.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(r.text, style: GoogleFonts.inter(
+                        fontSize: 13, color: Colors.white)),
+                  ),
+                ),
+              ]),
+            )).toList()),
+          ),
+      ]),
+    );
+  }
+}
+
+class _TextInput extends StatelessWidget {
+  final TextEditingController ctrl;
+  final String hint;
+  final ValueChanged<String> onSend;
+  final Color accentColor;
+
+  const _TextInput({
+    required this.ctrl,
+    required this.hint,
+    required this.onSend,
+    this.accentColor = team1Color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Expanded(
+        child: TextField(
+          controller: ctrl,
+          style: GoogleFonts.inter(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(color: Colors.white38),
+            filled: true, fillColor: cardColor,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          onSubmitted: onSend,
+        ),
+      ),
+      const SizedBox(width: 8),
+      IconButton(
+        style: IconButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.white),
+        icon: const Icon(Icons.send_rounded, size: 18),
+        onPressed: () => onSend(ctrl.text),
+      ),
+    ]);
   }
 }
 

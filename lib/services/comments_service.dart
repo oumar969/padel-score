@@ -16,11 +16,13 @@ class CommentsService {
             .toList());
   }
 
-  Future<void> add(String matchId, String text) async {
+  Future<void> add(String matchId, String text, {bool isOwnerReply = false, String? replyToId}) async {
     final comment = MatchComment(
       id: '',
       text: text.trim(),
       createdAt: DateTime.now(),
+      isOwnerReply: isOwnerReply,
+      replyToId: replyToId,
     );
     await _col(matchId).add(comment.toMap());
   }

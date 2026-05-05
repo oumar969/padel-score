@@ -109,8 +109,10 @@ class MatchActions {
         match.copyWith(servingTeam: match.servingTeam == 1 ? 2 : 1));
   }
 
-  Future<void> addComment(String matchId, String text) async {
-    await _ref.read(commentsServiceProvider).add(matchId, text);
+  Future<void> addComment(String matchId, String text,
+      {bool isOwnerReply = false, String? replyToId}) async {
+    await _ref.read(commentsServiceProvider).add(matchId, text,
+        isOwnerReply: isOwnerReply, replyToId: replyToId);
   }
 
   Future<void> undo(String matchId) async {
