@@ -14,17 +14,21 @@ class ScoreScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final matchAsync = ref.watch(matchProvider(matchId));
+    final ownerAsync = ref.watch(isMatchOwnerProvider(matchId));
+    final isOwner = ownerAsync.valueOrNull ?? false;
+
     return matchAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('Fejl: $e'))),
-      data: (match) => _ScoreView(match: match),
+      data: (match) => _ScoreView(match: match, isOwner: isOwner),
     );
   }
 }
 
 class _ScoreView extends ConsumerStatefulWidget {
   final PadelMatch match;
-  const _ScoreView({required this.match});
+  final bool isOwner;
+  const _ScoreView({required this.match, required this.isOwner});
 
   @override
   ConsumerState<_ScoreView> createState() => _ScoreViewState();
@@ -72,8 +76,10 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     final isFinished = match.status == MatchStatus.finished;
     final timer = ref.watch(matchTimerProvider(match.id)).valueOrNull ?? '00:00';
 
+    final isOwner = widget.isOwner;
+
     Future<void> onTap(int team) async {
-      if (isFinished) return;
+      if (!isOwner || isFinished) return;
       HapticFeedback.mediumImpact();
       await actions.awardPoint(match, team);
     }
@@ -84,7 +90,13 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
         children: [
           Column(
             children: [
-              _TopBar(match: match, canUndo: canUndo, actions: actions, timer: timer),
+              _TopBar(
+                match: match,
+                canUndo: canUndo && isOwner,
+                actions: actions,
+                timer: timer,
+                isOwner: isOwner,
+              ),
               Expanded(
                 child: Row(
                   children: [
@@ -93,6 +105,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
                       match: match,
                       flashController: _flashController,
                       onTap: () => onTap(1),
+                      isOwner: isOwner,
                     ),
                     _CenterDivider(match: match),
                     _TeamPanel(
@@ -100,6 +113,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
                       match: match,
                       flashController: _flashController,
                       onTap: () => onTap(2),
+                      isOwner: isOwner,
                     ),
                   ],
                 ),
@@ -114,57 +128,59 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
   }
 }
 
-void _showTvDialog(BuildContext context, String matchId) {
+void _copyUrl(BuildContext context, String url) {
+  Clipboard.setData(ClipboardData(text: url));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text('Kopieret!', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+    backgroundColor: team1Color,
+    behavior: SnackBarBehavior.floating,
+    duration: const Duration(seconds: 2),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  ));
+}
+
+Widget _urlTile(BuildContext context, String label, String url, IconData icon) {
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(label, style: GoogleFonts.inter(fontSize: 11, color: Colors.white38, letterSpacing: 1)),
+    const SizedBox(height: 6),
+    GestureDetector(
+      onTap: () => _copyUrl(context, url),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 16, color: team1Color),
+          const SizedBox(width: 10),
+          Expanded(child: Text(url,
+              style: GoogleFonts.inter(fontSize: 12, color: team1Color, fontWeight: FontWeight.w600))),
+          const Icon(Icons.copy_rounded, size: 14, color: Colors.white24),
+        ]),
+      ),
+    ),
+  ]);
+}
+
+void _showShareDialog(BuildContext context, String matchId) {
   const base = 'https://padel-score-ab0b5.web.app';
-  final url = '$base/tv/$matchId';
+  final spectatorUrl = '$base/match/$matchId';
+  final tvUrl = '$base/tv/$matchId';
+
   showDialog(
     context: context,
     builder: (_) => AlertDialog(
       backgroundColor: const Color(0xFF1A1A2A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(children: [
-        const Icon(Icons.tv_rounded, color: team1Color, size: 22),
-        const SizedBox(width: 10),
-        Text('TV-visning', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-      ]),
+      title: Text('Del kamp', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text('Åbn denne URL i TV-browseren:',
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 13)),
-        const SizedBox(height: 12),
-        GestureDetector(
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: url));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('URL kopieret!',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                backgroundColor: team1Color,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Text(url,
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: team1Color, fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded, size: 16, color: Colors.white38),
-            ]),
-          ),
-        ),
+        _urlTile(context, 'TILSKUER-LINK', spectatorUrl, Icons.visibility_rounded),
+        const SizedBox(height: 14),
+        _urlTile(context, 'TV-SKÆRM', tvUrl, Icons.tv_rounded),
         const SizedBox(height: 10),
-        Text('Tryk på URL\'en for at kopiere',
+        Text('Tryk på en URL for at kopiere',
             style: GoogleFonts.inter(fontSize: 11, color: Colors.white24)),
       ]),
       actions: [
@@ -177,16 +193,66 @@ void _showTvDialog(BuildContext context, String matchId) {
   );
 }
 
+class _LiveBadge extends StatefulWidget {
+  @override
+  State<_LiveBadge> createState() => _LiveBadgeState();
+}
+
+class _LiveBadgeState extends State<_LiveBadge> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: team2Color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: team2Color.withValues(alpha: 0.3)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          FadeTransition(
+            opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
+            child: Container(
+              width: 6, height: 6,
+              decoration: const BoxDecoration(color: team2Color, shape: BoxShape.circle),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text('LIVE', style: GoogleFonts.inter(
+            fontSize: 11, fontWeight: FontWeight.w800,
+            letterSpacing: 1.5, color: team2Color,
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
 class _TopBar extends ConsumerWidget {
   final PadelMatch match;
   final bool canUndo;
   final MatchActions actions;
   final String timer;
+  final bool isOwner;
   const _TopBar({
     required this.match,
     required this.canUndo,
     required this.actions,
     required this.timer,
+    required this.isOwner,
   });
 
   @override
@@ -204,23 +270,29 @@ class _TopBar extends ConsumerWidget {
                 onPressed: () => context.pop(),
               ),
               Expanded(child: _SetRow(match: match)),
-              IconButton(
-                style: IconButton.styleFrom(
-                  backgroundColor: team1Color.withValues(alpha: 0.15),
-                  foregroundColor: team1Color,
+
+              // Tilskuer-badge ELLER TV + Undo til ejer
+              if (!isOwner)
+                _LiveBadge()
+              else ...[
+                IconButton(
+                  style: IconButton.styleFrom(
+                    backgroundColor: team1Color.withValues(alpha: 0.15),
+                    foregroundColor: team1Color,
+                  ),
+                  icon: const Icon(Icons.tv_rounded, size: 18),
+                  onPressed: () => _showShareDialog(context, match.id),
                 ),
-                icon: const Icon(Icons.tv_rounded, size: 18),
-                onPressed: () => _showTvDialog(context, match.id),
-              ),
-              AnimatedOpacity(
-                opacity: canUndo ? 1 : 0.2,
-                duration: const Duration(milliseconds: 200),
-                child: IconButton(
-                  icon: const Icon(Icons.undo_rounded, size: 22),
-                  color: Colors.white70,
-                  onPressed: canUndo ? () => actions.undo(match.id) : null,
+                AnimatedOpacity(
+                  opacity: canUndo ? 1 : 0.2,
+                  duration: const Duration(milliseconds: 200),
+                  child: IconButton(
+                    icon: const Icon(Icons.undo_rounded, size: 22),
+                    color: Colors.white70,
+                    onPressed: canUndo ? () => actions.undo(match.id) : null,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           if (match.matchStartedAt != null)
@@ -310,12 +382,14 @@ class _TeamPanel extends StatelessWidget {
   final PadelMatch match;
   final AnimationController flashController;
   final VoidCallback onTap;
+  final bool isOwner;
 
   const _TeamPanel({
     required this.team,
     required this.match,
     required this.flashController,
     required this.onTap,
+    required this.isOwner,
   });
 
   @override
@@ -425,17 +499,19 @@ class _TeamPanel extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // Tap hint
+              // Tap hint / tilskuer label
               if (match.status == MatchStatus.active)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.touch_app_rounded,
-                        size: 14,
-                        color: color.withValues(alpha: 0.25)),
+                    Icon(
+                      isOwner ? Icons.touch_app_rounded : Icons.visibility_rounded,
+                      size: 14,
+                      color: color.withValues(alpha: 0.25),
+                    ),
                     const SizedBox(width: 4),
                     Text(
-                      'TAP',
+                      isOwner ? 'TAP' : 'TILSKUER',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
