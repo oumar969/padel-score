@@ -20,12 +20,17 @@ class FirestoreService {
     });
   }
 
-  Future<String> createMatch(String team1Name, String team2Name) async {
+  Future<String> createMatch(
+    String format,
+    List<String> team1Players,
+    List<String> team2Players,
+  ) async {
     final doc = _col.doc();
     final match = PadelMatch.create(
       id: doc.id,
-      team1Name: team1Name,
-      team2Name: team2Name,
+      format: format,
+      team1Players: team1Players,
+      team2Players: team2Players,
     );
     await doc.set(match.toMap());
     return doc.id;

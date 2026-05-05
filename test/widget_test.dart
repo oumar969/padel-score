@@ -9,8 +9,9 @@ void main() {
     setUp(() {
       match = PadelMatch.create(
         id: 'test',
-        team1Name: 'Hold 1',
-        team2Name: 'Hold 2',
+        format: '2v2',
+        team1Players: ['Ali', 'Bob'],
+        team2Players: ['Carl', 'Dan'],
       );
     });
 
@@ -18,6 +19,12 @@ void main() {
       final m = awardPoint(match, 1);
       expect(m.currentGameT1, 1);
       expect(m.currentGameT2, 0);
+    });
+
+    test('timer starter ved første point', () {
+      expect(match.matchStartedAt, isNull);
+      final m = awardPoint(match, 1);
+      expect(m.matchStartedAt, isNotNull);
     });
 
     test('spil vindes ved 4 points med 2 forans', () {
@@ -49,17 +56,13 @@ void main() {
 
     test('tiebreak aktiveres ved 6-6 i samme sæt', () {
       var m = match;
-      // 5-0
       for (int game = 0; game < 5; game++) {
         for (int pt = 0; pt < 4; pt++) { m = awardPoint(m, 1); }
       }
-      // 5-5
       for (int game = 0; game < 5; game++) {
         for (int pt = 0; pt < 4; pt++) { m = awardPoint(m, 2); }
       }
-      // 6-5
       for (int pt = 0; pt < 4; pt++) { m = awardPoint(m, 1); }
-      // 6-6 → tiebreak
       for (int pt = 0; pt < 4; pt++) { m = awardPoint(m, 2); }
       expect(m.isTiebreak, true);
     });

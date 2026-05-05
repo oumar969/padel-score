@@ -3,6 +3,9 @@ import 'match_model.dart';
 PadelMatch awardPoint(PadelMatch match, int team) {
   if (match.status == MatchStatus.finished) return match;
 
+  // Start timer on first point
+  final startedAt = match.matchStartedAt ?? DateTime.now();
+
   final t1 = match.currentGameT1 + (team == 1 ? 1 : 0);
   final t2 = match.currentGameT2 + (team == 2 ? 1 : 0);
 
@@ -18,14 +21,17 @@ PadelMatch awardPoint(PadelMatch match, int team) {
   }
 
   if (!gameWon) {
-    return match.copyWith(currentGameT1: t1, currentGameT2: t2);
+    return match.copyWith(
+      currentGameT1: t1,
+      currentGameT2: t2,
+      matchStartedAt: startedAt,
+    );
   }
 
   final setT1 = match.currentSetT1 + (gameWinner == 1 ? 1 : 0);
   final setT2 = match.currentSetT2 + (gameWinner == 2 ? 1 : 0);
 
   bool setWon = false;
-
   if (match.isTiebreak) {
     setWon = true;
   } else if (setT1 >= 6 && setT1 - setT2 >= 2) {
@@ -43,13 +49,13 @@ PadelMatch awardPoint(PadelMatch match, int team) {
       currentSetT1: setT1,
       currentSetT2: setT2,
       isTiebreak: newTiebreak,
+      matchStartedAt: startedAt,
     );
   }
 
   final completedSets = [...match.completedSets, SetScore(t1: setT1, t2: setT2)];
   final team1Sets = completedSets.where((s) => s.winner == 1).length;
   final team2Sets = completedSets.where((s) => s.winner == 2).length;
-
   final matchWon = team1Sets == 2 || team2Sets == 2;
   final matchWinner = team1Sets == 2 ? 1 : (team2Sets == 2 ? 2 : null);
 
@@ -62,5 +68,6 @@ PadelMatch awardPoint(PadelMatch match, int team) {
     isTiebreak: false,
     status: matchWon ? MatchStatus.finished : MatchStatus.active,
     winner: matchWinner,
+    matchStartedAt: startedAt,
   );
 }

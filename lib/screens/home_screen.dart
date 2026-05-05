@@ -33,6 +33,11 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.leaderboard_rounded),
+                color: Colors.white54,
+                onPressed: () => context.push('/stats'),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: _NewMatchButton(small: true),

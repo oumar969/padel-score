@@ -70,6 +70,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     final canUndo = ref.watch(canUndoProvider(match.id));
     final actions = ref.read(matchActionsProvider);
     final isFinished = match.status == MatchStatus.finished;
+    final timer = ref.watch(matchTimerProvider(match.id)).valueOrNull ?? '00:00';
 
     Future<void> onTap(int team) async {
       if (isFinished) return;
@@ -83,7 +84,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
         children: [
           Column(
             children: [
-              _TopBar(match: match, canUndo: canUndo, actions: actions),
+              _TopBar(match: match, canUndo: canUndo, actions: actions, timer: timer),
               Expanded(
                 child: Row(
                   children: [
@@ -117,7 +118,13 @@ class _TopBar extends ConsumerWidget {
   final PadelMatch match;
   final bool canUndo;
   final MatchActions actions;
-  const _TopBar({required this.match, required this.canUndo, required this.actions});
+  final String timer;
+  const _TopBar({
+    required this.match,
+    required this.canUndo,
+    required this.actions,
+    required this.timer,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -125,25 +132,41 @@ class _TopBar extends ConsumerWidget {
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              color: Colors.white54,
-              onPressed: () => context.pop(),
-            ),
-            Expanded(child: _SetRow(match: match)),
-            AnimatedOpacity(
-              opacity: canUndo ? 1 : 0.2,
-              duration: const Duration(milliseconds: 200),
-              child: IconButton(
-                icon: const Icon(Icons.undo_rounded, size: 22),
-                color: Colors.white70,
-                onPressed: canUndo ? () => actions.undo(match.id) : null,
+        child: Column(children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                color: Colors.white54,
+                onPressed: () => context.pop(),
               ),
+              Expanded(child: _SetRow(match: match)),
+              AnimatedOpacity(
+                opacity: canUndo ? 1 : 0.2,
+                duration: const Duration(milliseconds: 200),
+                child: IconButton(
+                  icon: const Icon(Icons.undo_rounded, size: 22),
+                  color: Colors.white70,
+                  onPressed: canUndo ? () => actions.undo(match.id) : null,
+                ),
+              ),
+            ],
+          ),
+          if (match.matchStartedAt != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.timer_outlined, size: 13,
+                    color: Colors.white.withValues(alpha: 0.25)),
+                const SizedBox(width: 4),
+                Text(timer, style: GoogleFonts.inter(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: Colors.white.withValues(alpha: 0.25),
+                  letterSpacing: 1,
+                )),
+              ]),
             ),
-          ],
-        ),
+        ]),
       ),
     );
   }
