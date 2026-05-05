@@ -1,0 +1,5 @@
+package com.padel.padel_score
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

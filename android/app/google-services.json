@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172981973758",
+    "project_id": "padel-score-ab0b5",
+    "storage_bucket": "padel-score-ab0b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172981973758:android:a756011501b47118b82baf",
+        "android_client_info": {
+          "package_name": "com.padel.padel_score"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcRzBiYn5ZGkXXhJTst8Ab12YatQ83F_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
