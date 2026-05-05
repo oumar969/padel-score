@@ -13,14 +13,14 @@ class NewMatchScreen extends ConsumerStatefulWidget {
 }
 
 class _NewMatchScreenState extends ConsumerState<NewMatchScreen> {
-  String _format = '2v2';
+  String _format = '1v1';
   bool _loading = false;
 
   // Max 4 players per team (for 4v4)
   final _t1 = List.generate(4, (i) => TextEditingController(text: 'Spiller ${i + 1}'));
   final _t2 = List.generate(4, (i) => TextEditingController(text: 'Spiller ${i + 5}'));
 
-  int get _count => _format == '2v2' ? 2 : 4;
+  int get _count => _format == '1v1' ? 1 : 2;
 
   @override
   void dispose() {
@@ -151,9 +151,9 @@ class _FormatSelector extends StatelessWidget {
         )),
         const SizedBox(height: 10),
         Row(children: [
-          _FormatChip(label: '2v2', selected: selected == '2v2', onTap: () => onChanged('2v2')),
+          _FormatChip(label: '1v1', selected: selected == '1v1', onTap: () => onChanged('1v1')),
           const SizedBox(width: 10),
-          _FormatChip(label: '4v4', selected: selected == '4v4', onTap: () => onChanged('4v4')),
+          _FormatChip(label: '2v2', selected: selected == '2v2', onTap: () => onChanged('2v2')),
         ]),
       ],
     );
