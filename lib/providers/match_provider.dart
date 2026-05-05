@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/match_model.dart';
+import '../models/match_settings.dart';
 import '../models/player_stats.dart';
+import '../models/comment_model.dart';
 import '../models/scoring.dart' as scoring;
 import '../services/firestore_service.dart';
 import '../services/ownership_service.dart';
+import '../services/comments_service.dart';
 
 final firestoreServiceProvider = Provider((_) => FirestoreService());
 final ownershipServiceProvider = Provider((_) => OwnershipService());
-
-final isMatchOwnerProvider = FutureProvider.family<bool, String>((ref, matchId) {
-  return ref.read(ownershipServiceProvider).isOwner(matchId);
-});
+final commentsServiceProvider = Provider((_) => CommentsService());
 
 final matchesProvider = StreamProvider<List<PadelMatch>>((ref) {
   return ref.watch(firestoreServiceProvider).watchMatches();
@@ -23,6 +23,10 @@ final matchProvider = StreamProvider.family<PadelMatch, String>((ref, id) {
 final playerStatsProvider = Provider<List<PlayerStats>>((ref) {
   final matches = ref.watch(matchesProvider).valueOrNull ?? [];
   return computePlayerStats(matches);
+});
+
+final isMatchOwnerProvider = FutureProvider.family<bool, String>((ref, matchId) {
+  return ref.read(ownershipServiceProvider).isOwner(matchId);
 });
 
 final matchTimerProvider = StreamProvider.family<String, String>((ref, matchId) async* {
@@ -40,6 +44,26 @@ final matchTimerProvider = StreamProvider.family<String, String>((ref, matchId) 
   }
 });
 
+final warmupTickProvider = StreamProvider.family<Duration, String>((ref, matchId) async* {
+  while (true) {
+    final match = ref.read(matchProvider(matchId)).valueOrNull;
+    yield match?.warmupRemaining ?? Duration.zero;
+    await Future.delayed(const Duration(seconds: 1));
+  }
+});
+
+final timeoutTickProvider = StreamProvider.family<Duration, String>((ref, matchId) async* {
+  while (true) {
+    final match = ref.read(matchProvider(matchId)).valueOrNull;
+    yield match?.timeoutRemaining ?? Duration.zero;
+    await Future.delayed(const Duration(seconds: 1));
+  }
+});
+
+final commentsProvider = StreamProvider.family<List<MatchComment>, String>((ref, matchId) {
+  return ref.watch(commentsServiceProvider).watch(matchId);
+});
+
 final _undoStackProvider = StateProvider<Map<String, List<PadelMatch>>>((_) => {});
 
 class MatchActions {
@@ -52,8 +76,11 @@ class MatchActions {
     String format,
     List<String> team1Players,
     List<String> team2Players,
+    MatchSettings settings,
+    int initialServingTeam,
   ) async {
-    final id = await _service.createMatch(format, team1Players, team2Players);
+    final id = await _service.createMatch(
+        format, team1Players, team2Players, settings, initialServingTeam);
     await _ref.read(ownershipServiceProvider).claim(id);
     return id;
   }
@@ -64,8 +91,31 @@ class MatchActions {
     await _service.updateMatch(updated);
   }
 
+  Future<void> startTimeout(PadelMatch match) async {
+    await _service.updateMatch(
+        match.copyWith(timeoutStartedAt: DateTime.now()));
+  }
+
+  Future<void> endTimeout(PadelMatch match) async {
+    await _service.updateMatch(match.copyWith(clearTimeout: true));
+  }
+
+  Future<void> endWarmup(PadelMatch match) async {
+    await _service.updateMatch(match.copyWith(clearWarmup: true));
+  }
+
+  Future<void> switchServe(PadelMatch match) async {
+    await _service.updateMatch(
+        match.copyWith(servingTeam: match.servingTeam == 1 ? 2 : 1));
+  }
+
+  Future<void> addComment(String matchId, String text) async {
+    await _ref.read(commentsServiceProvider).add(matchId, text);
+  }
+
   Future<void> undo(String matchId) async {
-    final stack = Map<String, List<PadelMatch>>.from(_ref.read(_undoStackProvider));
+    final stack =
+        Map<String, List<PadelMatch>>.from(_ref.read(_undoStackProvider));
     final history = stack[matchId];
     if (history == null || history.isEmpty) return;
     final previous = history.last;
@@ -82,7 +132,8 @@ class MatchActions {
   Future<void> deleteMatch(String id) => _service.deleteMatch(id);
 
   void _pushUndo(PadelMatch match) {
-    final stack = Map<String, List<PadelMatch>>.from(_ref.read(_undoStackProvider));
+    final stack =
+        Map<String, List<PadelMatch>>.from(_ref.read(_undoStackProvider));
     final history = List<PadelMatch>.from(stack[match.id] ?? []);
     history.add(match);
     if (history.length > 20) history.removeAt(0);

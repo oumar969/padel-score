@@ -2,10 +2,9 @@ import 'match_model.dart';
 
 PadelMatch awardPoint(PadelMatch match, int team) {
   if (match.status == MatchStatus.finished) return match;
+  if (match.isInTimeout || match.isInWarmup) return match;
 
-  // Start timer on first point
   final startedAt = match.matchStartedAt ?? DateTime.now();
-
   final t1 = match.currentGameT1 + (team == 1 ? 1 : 0);
   final t2 = match.currentGameT2 + (team == 2 ? 1 : 0);
 
@@ -21,12 +20,14 @@ PadelMatch awardPoint(PadelMatch match, int team) {
   }
 
   if (!gameWon) {
-    return match.copyWith(
-      currentGameT1: t1,
-      currentGameT2: t2,
-      matchStartedAt: startedAt,
-    );
+    return match.copyWith(currentGameT1: t1, currentGameT2: t2, matchStartedAt: startedAt);
   }
+
+  // Game won — toggle serve, increment game count
+  final newServingTeam = match.settings.serveIndicator
+      ? (match.servingTeam == 1 ? 2 : 1)
+      : match.servingTeam;
+  final newGamesPlayed = match.totalGamesPlayed + 1;
 
   final setT1 = match.currentSetT1 + (gameWinner == 1 ? 1 : 0);
   final setT2 = match.currentSetT2 + (gameWinner == 2 ? 1 : 0);
@@ -50,6 +51,8 @@ PadelMatch awardPoint(PadelMatch match, int team) {
       currentSetT2: setT2,
       isTiebreak: newTiebreak,
       matchStartedAt: startedAt,
+      servingTeam: newServingTeam,
+      totalGamesPlayed: newGamesPlayed,
     );
   }
 
@@ -69,5 +72,7 @@ PadelMatch awardPoint(PadelMatch match, int team) {
     status: matchWon ? MatchStatus.finished : MatchStatus.active,
     winner: matchWinner,
     matchStartedAt: startedAt,
+    servingTeam: newServingTeam,
+    totalGamesPlayed: newGamesPlayed,
   );
 }

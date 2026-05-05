@@ -1,3 +1,5 @@
+import 'match_settings.dart';
+
 class SetScore {
   final int t1;
   final int t2;
@@ -18,7 +20,7 @@ class PadelMatch {
   final String id;
   final String team1Name;
   final String team2Name;
-  final String format; // '2v2' or '4v4'
+  final String format;
   final List<String> team1Players;
   final List<String> team2Players;
   final List<SetScore> completedSets;
@@ -31,6 +33,17 @@ class PadelMatch {
   final int? winner;
   final DateTime createdAt;
   final DateTime? matchStartedAt;
+
+  // Settings & features
+  final MatchSettings settings;
+  final int servingTeam;        // 1 or 2
+  final int totalGamesPlayed;   // for ball reminder
+  final DateTime? warmupStartedAt;
+  final DateTime? timeoutStartedAt;
+
+  static const warmupDuration = Duration(minutes: 5);
+  static const timeoutDuration = Duration(seconds: 60);
+  static const ballReminderEvery = 9;
 
   const PadelMatch({
     required this.id,
@@ -49,16 +62,20 @@ class PadelMatch {
     this.winner,
     required this.createdAt,
     this.matchStartedAt,
+    required this.settings,
+    required this.servingTeam,
+    required this.totalGamesPlayed,
+    this.warmupStartedAt,
+    this.timeoutStartedAt,
   });
+
+  // ── Computed ────────────────────────────────────────────────────────────────
 
   int get team1Sets => completedSets.where((s) => s.winner == 1).length;
   int get team2Sets => completedSets.where((s) => s.winner == 2).length;
 
   bool get isDeuce =>
-      !isTiebreak &&
-      currentGameT1 >= 3 &&
-      currentGameT2 >= 3 &&
-      currentGameT1 == currentGameT2;
+      !isTiebreak && currentGameT1 >= 3 && currentGameT2 >= 3 && currentGameT1 == currentGameT2;
 
   bool get team1HasAdvantage =>
       !isTiebreak && currentGameT1 >= 3 && currentGameT2 >= 3 && currentGameT1 > currentGameT2;
@@ -81,6 +98,37 @@ class PadelMatch {
   Duration get elapsed =>
       matchStartedAt != null ? DateTime.now().difference(matchStartedAt!) : Duration.zero;
 
+  bool get isInWarmup {
+    if (!settings.warmup || warmupStartedAt == null) return false;
+    return DateTime.now().difference(warmupStartedAt!) < warmupDuration;
+  }
+
+  Duration get warmupRemaining {
+    if (warmupStartedAt == null) return Duration.zero;
+    final elapsed = DateTime.now().difference(warmupStartedAt!);
+    final remaining = warmupDuration - elapsed;
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  bool get isInTimeout {
+    if (timeoutStartedAt == null) return false;
+    return DateTime.now().difference(timeoutStartedAt!) < timeoutDuration;
+  }
+
+  Duration get timeoutRemaining {
+    if (timeoutStartedAt == null) return Duration.zero;
+    final elapsed = DateTime.now().difference(timeoutStartedAt!);
+    final remaining = timeoutDuration - elapsed;
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  bool get needsBallReminder =>
+      settings.ballReminder &&
+      totalGamesPlayed > 0 &&
+      totalGamesPlayed % ballReminderEvery == 0;
+
+  // ── copyWith ────────────────────────────────────────────────────────────────
+
   PadelMatch copyWith({
     String? team1Name,
     String? team2Name,
@@ -93,6 +141,12 @@ class PadelMatch {
     MatchStatus? status,
     int? winner,
     DateTime? matchStartedAt,
+    int? servingTeam,
+    int? totalGamesPlayed,
+    DateTime? warmupStartedAt,
+    DateTime? timeoutStartedAt,
+    bool clearTimeout = false,
+    bool clearWarmup = false,
   }) {
     return PadelMatch(
       id: id,
@@ -111,8 +165,15 @@ class PadelMatch {
       winner: winner ?? this.winner,
       createdAt: createdAt,
       matchStartedAt: matchStartedAt ?? this.matchStartedAt,
+      settings: settings,
+      servingTeam: servingTeam ?? this.servingTeam,
+      totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
+      warmupStartedAt: clearWarmup ? null : (warmupStartedAt ?? this.warmupStartedAt),
+      timeoutStartedAt: clearTimeout ? null : (timeoutStartedAt ?? this.timeoutStartedAt),
     );
   }
+
+  // ── Serialization ───────────────────────────────────────────────────────────
 
   Map<String, dynamic> toMap() => {
         'team1Name': team1Name,
@@ -130,6 +191,11 @@ class PadelMatch {
         'winner': winner,
         'createdAt': createdAt.toIso8601String(),
         'matchStartedAt': matchStartedAt?.toIso8601String(),
+        'settings': settings.toMap(),
+        'servingTeam': servingTeam,
+        'totalGamesPlayed': totalGamesPlayed,
+        'warmupStartedAt': warmupStartedAt?.toIso8601String(),
+        'timeoutStartedAt': timeoutStartedAt?.toIso8601String(),
       };
 
   factory PadelMatch.fromMap(String id, Map<String, dynamic> m) {
@@ -156,6 +222,15 @@ class PadelMatch {
       matchStartedAt: m['matchStartedAt'] != null
           ? DateTime.parse(m['matchStartedAt'] as String)
           : null,
+      settings: MatchSettings.fromMap(m['settings'] as Map<String, dynamic>?),
+      servingTeam: (m['servingTeam'] as num?)?.toInt() ?? 1,
+      totalGamesPlayed: (m['totalGamesPlayed'] as num?)?.toInt() ?? 0,
+      warmupStartedAt: m['warmupStartedAt'] != null
+          ? DateTime.parse(m['warmupStartedAt'] as String)
+          : null,
+      timeoutStartedAt: m['timeoutStartedAt'] != null
+          ? DateTime.parse(m['timeoutStartedAt'] as String)
+          : null,
     );
   }
 
@@ -164,6 +239,8 @@ class PadelMatch {
     required String format,
     required List<String> team1Players,
     required List<String> team2Players,
+    required MatchSettings settings,
+    required int initialServingTeam,
   }) =>
       PadelMatch(
         id: id,
@@ -180,5 +257,9 @@ class PadelMatch {
         isTiebreak: false,
         status: MatchStatus.active,
         createdAt: DateTime.now(),
+        settings: settings,
+        servingTeam: initialServingTeam,
+        totalGamesPlayed: 0,
+        warmupStartedAt: settings.warmup ? DateTime.now() : null,
       );
 }

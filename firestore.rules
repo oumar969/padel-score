@@ -3,6 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /matches/{matchId} {
       allow read, write: if true;
+      match /comments/{commentId} {
+        allow read, create: if true;
+        allow update, delete: if false;
+      }
     }
   }
 }
