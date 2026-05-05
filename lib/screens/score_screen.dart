@@ -114,6 +114,69 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
   }
 }
 
+void _showTvDialog(BuildContext context, String matchId) {
+  const base = 'https://padel-score-ab0b5.web.app';
+  final url = '$base/tv/$matchId';
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A2A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(children: [
+        const Icon(Icons.tv_rounded, color: team1Color, size: 22),
+        const SizedBox(width: 10),
+        Text('TV-visning', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+      ]),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('Åbn denne URL i TV-browseren:',
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 13)),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: url));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('URL kopieret!',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                backgroundColor: team1Color,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Row(children: [
+              Expanded(
+                child: Text(url,
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: team1Color, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.copy_rounded, size: 16, color: Colors.white38),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text('Tryk på URL\'en for at kopiere',
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.white24)),
+      ]),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Luk', style: GoogleFonts.inter(color: Colors.white54)),
+        ),
+      ],
+    ),
+  );
+}
+
 class _TopBar extends ConsumerWidget {
   final PadelMatch match;
   final bool canUndo;
@@ -141,6 +204,11 @@ class _TopBar extends ConsumerWidget {
                 onPressed: () => context.pop(),
               ),
               Expanded(child: _SetRow(match: match)),
+              IconButton(
+                icon: const Icon(Icons.tv_rounded, size: 20),
+                color: Colors.white38,
+                onPressed: () => _showTvDialog(context, match.id),
+              ),
               AnimatedOpacity(
                 opacity: canUndo ? 1 : 0.2,
                 duration: const Duration(milliseconds: 200),
