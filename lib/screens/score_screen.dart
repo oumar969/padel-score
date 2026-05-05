@@ -205,8 +205,11 @@ class _TopBar extends ConsumerWidget {
               ),
               Expanded(child: _SetRow(match: match)),
               IconButton(
-                icon: const Icon(Icons.tv_rounded, size: 20),
-                color: Colors.white38,
+                style: IconButton.styleFrom(
+                  backgroundColor: team1Color.withValues(alpha: 0.15),
+                  foregroundColor: team1Color,
+                ),
+                icon: const Icon(Icons.tv_rounded, size: 18),
                 onPressed: () => _showTvDialog(context, match.id),
               ),
               AnimatedOpacity(
