@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,26 +22,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
+      extendBody: true,
       body: IndexedStack(
         index: _tab,
         children: const [_MatchesTab(), _StatsTab()],
       ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: surfaceColor,
-        indicatorColor: team1Color.withValues(alpha: 0.15),
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.sports_tennis_rounded),
-            label: 'Kampe',
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D0D1A).withValues(alpha: 0.72),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              elevation: 0,
+              indicatorColor: team1Color.withValues(alpha: 0.15),
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.sports_tennis_rounded),
+                  label: 'Kampe',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.leaderboard_rounded),
+                  label: 'Statistik',
+                ),
+              ],
+            ),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.leaderboard_rounded),
-            label: 'Statistik',
-          ),
-        ],
+        ),
       ),
       floatingActionButton: _tab == 0
           ? FloatingActionButton.extended(
@@ -106,7 +127,7 @@ class _MatchesTab extends ConsumerWidget {
                 matches.where((m) => m.status == MatchStatus.finished).toList();
 
             return SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   if (active.isNotEmpty) ...[
