@@ -40,9 +40,18 @@ final matchTimerProvider = StreamProvider.family<String, String>((ref, matchId) 
   while (true) {
     final match = ref.read(matchProvider(matchId)).valueOrNull;
     if (match?.matchStartedAt != null) {
-      final e = DateTime.now().difference(match!.matchStartedAt!);
-      final m = e.inMinutes.remainder(60).toString().padLeft(2, '0');
-      final s = e.inSeconds.remainder(60).toString().padLeft(2, '0');
+      final end = match!.status == MatchStatus.finished
+          ? (match.finishedAt ?? DateTime.now())
+          : DateTime.now();
+      final currentPause = match.isPaused && match.pausedAt != null
+          ? DateTime.now().difference(match.pausedAt!)
+          : Duration.zero;
+      var net = end.difference(match.matchStartedAt!) -
+          Duration(seconds: match.totalPausedSeconds) -
+          currentPause;
+      if (net.isNegative) net = Duration.zero;
+      final m = net.inMinutes.remainder(60).toString().padLeft(2, '0');
+      final s = net.inSeconds.remainder(60).toString().padLeft(2, '0');
       yield '$m:$s';
     } else {
       yield '00:00';
@@ -137,6 +146,24 @@ class MatchActions {
   bool canUndo(String matchId) {
     final history = _ref.read(_undoStackProvider)[matchId];
     return history != null && history.isNotEmpty;
+  }
+
+  Future<void> pauseMatch(PadelMatch match) async {
+    await _service.updateMatch(match.copyWith(
+      isPaused: true,
+      pausedAt: DateTime.now(),
+    ));
+  }
+
+  Future<void> resumeMatch(PadelMatch match) async {
+    final extra = match.pausedAt != null
+        ? DateTime.now().difference(match.pausedAt!).inSeconds
+        : 0;
+    await _service.updateMatch(match.copyWith(
+      isPaused: false,
+      totalPausedSeconds: match.totalPausedSeconds + extra,
+      clearPause: true,
+    ));
   }
 
   Future<void> deleteMatch(String id) => _service.deleteMatch(id);

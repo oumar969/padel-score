@@ -42,7 +42,9 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
   late AnimationController _flash;
   int? _lastT1, _lastT2;
   bool _ballReminderDismissed = false;
+  bool _sideSwitchDismissed = false;
   int _lastGames = 0;
+  int _lastSetCount = 0;
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     _lastT1 = widget.match.currentGameT1;
     _lastT2 = widget.match.currentGameT2;
     _lastGames = widget.match.totalGamesPlayed;
+    _lastSetCount = widget.match.completedSets.length;
   }
 
   @override
@@ -61,10 +64,13 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
       _lastT1 = m.currentGameT1; _lastT2 = m.currentGameT2;
       _flash.forward(from: 0);
     }
-    // Reset ball reminder dismiss when game count changes
     if (m.totalGamesPlayed != _lastGames) {
       _lastGames = m.totalGamesPlayed;
       _ballReminderDismissed = false;
+    }
+    if (m.completedSets.length > _lastSetCount) {
+      _lastSetCount = m.completedSets.length;
+      if (m.status == MatchStatus.active) _sideSwitchDismissed = false;
     }
   }
 
@@ -82,9 +88,13 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     final warmupLeft = ref.watch(warmupTickProvider(match.id)).valueOrNull ?? Duration.zero;
     final timeoutLeft = ref.watch(timeoutTickProvider(match.id)).valueOrNull ?? Duration.zero;
     final showBallReminder = match.needsBallReminder && !_ballReminderDismissed;
+    final showSideSwitch = match.settings.sideSwitch &&
+        match.completedSets.isNotEmpty &&
+        match.status == MatchStatus.active &&
+        !_sideSwitchDismissed;
 
     Future<void> onTap(int team) async {
-      if (!isOwner || isFinished || match.isInTimeout || match.isInWarmup) return;
+      if (!isOwner || isFinished || match.isInTimeout || match.isInWarmup || match.isPaused) return;
       HapticFeedback.mediumImpact();
       await actions.awardPoint(match, team);
     }
@@ -99,6 +109,8 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
                 actions: actions, timer: timer, isOwner: isOwner),
             if (showBallReminder)
               _BallReminderBanner(onDismiss: () => setState(() => _ballReminderDismissed = true)),
+            if (showSideSwitch)
+              _SideSwitchBanner(onDismiss: () => setState(() => _sideSwitchDismissed = true)),
             Expanded(
               child: Row(children: [
                 _TeamPanel(team: 1, match: match, flashCtrl: _flash,
@@ -120,6 +132,13 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
           if (match.isInTimeout)
             _TimeoutOverlay(remaining: timeoutLeft, isOwner: isOwner,
                 onEnd: () => actions.endTimeout(match)),
+
+          // Pause overlay
+          if (match.isPaused)
+            _PauseOverlay(
+              timer: timer, isOwner: isOwner,
+              onResume: () => actions.resumeMatch(match),
+            ),
 
           // Win overlay
           if (isFinished) _WinOverlay(match: match),
@@ -161,8 +180,25 @@ class _TopBar extends ConsumerWidget {
             if (!isOwner)
               _LiveBadge()
             else ...[
+              // Pause button
+              if (!match.isInTimeout && !match.isInWarmup)
+                IconButton(
+                  style: IconButton.styleFrom(
+                    backgroundColor: match.isPaused
+                        ? team1Color.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.06),
+                    foregroundColor: match.isPaused ? team1Color : Colors.white38,
+                  ),
+                  icon: Icon(
+                    match.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                    size: 18,
+                  ),
+                  onPressed: () => match.isPaused
+                      ? actions.resumeMatch(match)
+                      : actions.pauseMatch(match),
+                ),
               // Timeout button
-              if (match.settings.timeout && !match.isInTimeout)
+              if (match.settings.timeout && !match.isInTimeout && !match.isPaused)
                 IconButton(
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.orange.withValues(alpha: 0.15),
@@ -264,6 +300,19 @@ class _TeamPanel extends StatelessWidget {
                     Text('SERVE', style: GoogleFonts.inter(
                         fontSize: 15, fontWeight: FontWeight.w800,
                         letterSpacing: 2, color: color)),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        (match.currentGameT1 + match.currentGameT2) % 2 == 0 ? 'D' : 'Ad',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, fontWeight: FontWeight.w800, color: color),
+                      ),
+                    ),
                   ]),
                 ),
               ),
@@ -354,6 +403,75 @@ class _BallReminderBanner extends StatelessWidget {
           child: const Icon(Icons.close_rounded, size: 18, color: Colors.white38),
         ),
       ]),
+    );
+  }
+}
+
+// ── Side switch banner ────────────────────────────────────────────────────────
+
+class _SideSwitchBanner extends StatelessWidget {
+  final VoidCallback onDismiss;
+  const _SideSwitchBanner({required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF001A20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(children: [
+        const Text('↔️', style: TextStyle(fontSize: 18)),
+        const SizedBox(width: 10),
+        Expanded(child: Text('Skift side!', style: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w700, color: team1Color))),
+        GestureDetector(
+          onTap: onDismiss,
+          child: const Icon(Icons.close_rounded, size: 18, color: Colors.white38),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Pause overlay ─────────────────────────────────────────────────────────────
+
+class _PauseOverlay extends StatelessWidget {
+  final String timer;
+  final bool isOwner;
+  final VoidCallback onResume;
+  const _PauseOverlay({required this.timer, required this.isOwner, required this.onResume});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.85),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.pause_circle_filled_rounded, size: 72, color: Colors.white24),
+          const SizedBox(height: 20),
+          Text('PAUSE', style: GoogleFonts.inter(
+              fontSize: 13, fontWeight: FontWeight.w800,
+              letterSpacing: 4, color: Colors.white38)),
+          const SizedBox(height: 12),
+          Text(timer, style: GoogleFonts.inter(
+              fontSize: 52, fontWeight: FontWeight.w900,
+              color: Colors.white38, letterSpacing: -2)),
+          const SizedBox(height: 32),
+          if (isOwner)
+            ElevatedButton.icon(
+              onPressed: onResume,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text('Fortsæt kamp', style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700, fontSize: 15)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: team1Color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+        ]),
+      ),
     );
   }
 }
@@ -877,7 +995,10 @@ class _StatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     String label = '';
     Color color = Colors.white38;
-    if (match.isDeuce) { label = 'DEUCE'; color = goldColor.withValues(alpha: 0.8); }
+    if (match.isDeuce) {
+      label = match.currentGameDeuces > 1 ? 'DEUCE  ×${match.currentGameDeuces}' : 'DEUCE';
+      color = goldColor.withValues(alpha: 0.8);
+    }
     else if (match.team1HasAdvantage) { label = 'AD ${match.team1Name.toUpperCase()}'; color = team1Color; }
     else if (match.team2HasAdvantage) { label = 'AD ${match.team2Name.toUpperCase()}'; color = team2Color; }
     else if (match.isTiebreak) { label = 'TIEBREAK'; color = goldColor.withValues(alpha: 0.8); }
@@ -941,6 +1062,17 @@ class _WinOverlay extends StatelessWidget {
                   child: Text('${s.t1}-${s.t2}', style: GoogleFonts.inter(
                       fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white38)),
                 )).toList()),
+            if (match.matchStartedAt != null) ...[
+              const SizedBox(height: 12),
+              Builder(builder: (_) {
+                final d = match.finalDuration;
+                final dur = d == Duration.zero ? match.elapsed : d;
+                final mm = dur.inMinutes.remainder(60).toString().padLeft(2, '0');
+                final ss = dur.inSeconds.remainder(60).toString().padLeft(2, '0');
+                return Text('⏱  $mm:$ss', style: GoogleFonts.inter(
+                    fontSize: 14, color: Colors.white30));
+              }),
+            ],
             const SizedBox(height: 56),
             OutlinedButton.icon(
               onPressed: () => context.push('/match/${match.id}/analysis'),

@@ -2,7 +2,7 @@ import 'match_model.dart';
 
 PadelMatch awardPoint(PadelMatch match, int team) {
   if (match.status == MatchStatus.finished) return match;
-  if (match.isInTimeout || match.isInWarmup) return match;
+  if (match.isInTimeout || match.isInWarmup || match.isPaused) return match;
 
   final startedAt = match.matchStartedAt ?? DateTime.now();
   final t1 = match.currentGameT1 + (team == 1 ? 1 : 0);
@@ -20,7 +20,15 @@ PadelMatch awardPoint(PadelMatch match, int team) {
   }
 
   if (!gameWon) {
-    return match.copyWith(currentGameT1: t1, currentGameT2: t2, matchStartedAt: startedAt);
+    // Detect deuce (only in regular games, not tiebreak)
+    final isDeuceNow = !match.isTiebreak && t1 >= 3 && t2 >= 3 && t1 == t2;
+    return match.copyWith(
+      currentGameT1: t1,
+      currentGameT2: t2,
+      matchStartedAt: startedAt,
+      currentGameDeuces: isDeuceNow ? match.currentGameDeuces + 1 : null,
+      totalDeuces: isDeuceNow ? match.totalDeuces + 1 : null,
+    );
   }
 
   // Game won — toggle serve, increment game count, log winner
@@ -55,6 +63,7 @@ PadelMatch awardPoint(PadelMatch match, int team) {
       servingTeam: newServingTeam,
       totalGamesPlayed: newGamesPlayed,
       gameLog: newGameLog,
+      currentGameDeuces: 0,
     );
   }
 
@@ -77,5 +86,7 @@ PadelMatch awardPoint(PadelMatch match, int team) {
     servingTeam: newServingTeam,
     totalGamesPlayed: newGamesPlayed,
     gameLog: newGameLog,
+    currentGameDeuces: 0,
+    finishedAt: matchWon ? DateTime.now() : null,
   );
 }

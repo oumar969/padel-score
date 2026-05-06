@@ -195,6 +195,14 @@ class _SettingsCard extends StatelessWidget {
         ),
         _divider(),
         _toggle(
+          icon: '↔️',
+          title: 'Side-skift påmindelse',
+          subtitle: 'Banner når holdene skal skifte side',
+          value: settings.sideSwitch,
+          onChanged: (v) => onChanged(settings.copyWith(sideSwitch: v)),
+        ),
+        _divider(),
+        _toggle(
           icon: '💬',
           title: 'Live kommentarer',
           subtitle: 'Tilskuere kan skrive kommentarer',

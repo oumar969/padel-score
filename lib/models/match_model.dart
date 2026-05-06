@@ -37,6 +37,18 @@ class PadelMatch {
   final String? ownerId;
   final List<int> gameLog; // 1 or 2 for each game won, in order
 
+  // Pause
+  final bool isPaused;
+  final DateTime? pausedAt;
+  final int totalPausedSeconds;
+
+  // Finish
+  final DateTime? finishedAt;
+
+  // Deuce tracking
+  final int totalDeuces;
+  final int currentGameDeuces;
+
   // Settings & features
   final MatchSettings settings;
   final int servingTeam;        // 1 or 2
@@ -67,6 +79,12 @@ class PadelMatch {
     this.matchStartedAt,
     this.ownerId,
     this.gameLog = const [],
+    this.isPaused = false,
+    this.pausedAt,
+    this.totalPausedSeconds = 0,
+    this.finishedAt,
+    this.totalDeuces = 0,
+    this.currentGameDeuces = 0,
     required this.settings,
     required this.servingTeam,
     required this.totalGamesPlayed,
@@ -100,8 +118,24 @@ class PadelMatch {
     return const ['0', '15', '30', '40'][my.clamp(0, 3)];
   }
 
-  Duration get elapsed =>
-      matchStartedAt != null ? DateTime.now().difference(matchStartedAt!) : Duration.zero;
+  Duration get elapsed {
+    if (matchStartedAt == null) return Duration.zero;
+    final end = status == MatchStatus.finished ? (finishedAt ?? DateTime.now()) : DateTime.now();
+    final currentPause = isPaused && pausedAt != null
+        ? DateTime.now().difference(pausedAt!)
+        : Duration.zero;
+    final net = end.difference(matchStartedAt!) -
+        Duration(seconds: totalPausedSeconds) -
+        currentPause;
+    return net.isNegative ? Duration.zero : net;
+  }
+
+  Duration get finalDuration {
+    if (matchStartedAt == null || finishedAt == null) return Duration.zero;
+    final net = finishedAt!.difference(matchStartedAt!) -
+        Duration(seconds: totalPausedSeconds);
+    return net.isNegative ? Duration.zero : net;
+  }
 
   bool get isInWarmup {
     if (!settings.warmup || warmupStartedAt == null) return false;
@@ -151,8 +185,15 @@ class PadelMatch {
     DateTime? warmupStartedAt,
     DateTime? timeoutStartedAt,
     List<int>? gameLog,
+    bool? isPaused,
+    DateTime? pausedAt,
+    int? totalPausedSeconds,
+    DateTime? finishedAt,
+    int? totalDeuces,
+    int? currentGameDeuces,
     bool clearTimeout = false,
     bool clearWarmup = false,
+    bool clearPause = false,
   }) {
     return PadelMatch(
       id: id,
@@ -173,6 +214,12 @@ class PadelMatch {
       matchStartedAt: matchStartedAt ?? this.matchStartedAt,
       ownerId: ownerId,
       gameLog: gameLog ?? this.gameLog,
+      isPaused: isPaused ?? this.isPaused,
+      pausedAt: clearPause ? null : (pausedAt ?? this.pausedAt),
+      totalPausedSeconds: totalPausedSeconds ?? this.totalPausedSeconds,
+      finishedAt: finishedAt ?? this.finishedAt,
+      totalDeuces: totalDeuces ?? this.totalDeuces,
+      currentGameDeuces: currentGameDeuces ?? this.currentGameDeuces,
       settings: settings,
       servingTeam: servingTeam ?? this.servingTeam,
       totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
@@ -201,6 +248,12 @@ class PadelMatch {
         'matchStartedAt': matchStartedAt?.toIso8601String(),
         'ownerId': ownerId,
         'gameLog': gameLog,
+        'isPaused': isPaused,
+        'pausedAt': pausedAt?.toIso8601String(),
+        'totalPausedSeconds': totalPausedSeconds,
+        'finishedAt': finishedAt?.toIso8601String(),
+        'totalDeuces': totalDeuces,
+        'currentGameDeuces': currentGameDeuces,
         'settings': settings.toMap(),
         'servingTeam': servingTeam,
         'totalGamesPlayed': totalGamesPlayed,
@@ -234,6 +287,12 @@ class PadelMatch {
           : null,
       ownerId: m['ownerId'] as String?,
       gameLog: (m['gameLog'] as List?)?.cast<int>() ?? const [],
+      isPaused: m['isPaused'] as bool? ?? false,
+      pausedAt: m['pausedAt'] != null ? DateTime.parse(m['pausedAt'] as String) : null,
+      totalPausedSeconds: (m['totalPausedSeconds'] as num?)?.toInt() ?? 0,
+      finishedAt: m['finishedAt'] != null ? DateTime.parse(m['finishedAt'] as String) : null,
+      totalDeuces: (m['totalDeuces'] as num?)?.toInt() ?? 0,
+      currentGameDeuces: (m['currentGameDeuces'] as num?)?.toInt() ?? 0,
       settings: MatchSettings.fromMap(m['settings'] as Map<String, dynamic>?),
       servingTeam: (m['servingTeam'] as num?)?.toInt() ?? 1,
       totalGamesPlayed: (m['totalGamesPlayed'] as num?)?.toInt() ?? 0,

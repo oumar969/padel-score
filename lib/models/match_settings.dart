@@ -3,6 +3,7 @@ class MatchSettings {
   final bool serveIndicator;
   final bool timeout;
   final bool ballReminder;
+  final bool sideSwitch;
   final bool liveComments;
 
   const MatchSettings({
@@ -10,6 +11,7 @@ class MatchSettings {
     this.serveIndicator = false,
     this.timeout = false,
     this.ballReminder = false,
+    this.sideSwitch = false,
     this.liveComments = false,
   });
 
@@ -18,6 +20,7 @@ class MatchSettings {
     bool? serveIndicator,
     bool? timeout,
     bool? ballReminder,
+    bool? sideSwitch,
     bool? liveComments,
   }) =>
       MatchSettings(
@@ -25,6 +28,7 @@ class MatchSettings {
         serveIndicator: serveIndicator ?? this.serveIndicator,
         timeout: timeout ?? this.timeout,
         ballReminder: ballReminder ?? this.ballReminder,
+        sideSwitch: sideSwitch ?? this.sideSwitch,
         liveComments: liveComments ?? this.liveComments,
       );
 
@@ -33,6 +37,7 @@ class MatchSettings {
         'serveIndicator': serveIndicator,
         'timeout': timeout,
         'ballReminder': ballReminder,
+        'sideSwitch': sideSwitch,
         'liveComments': liveComments,
       };
 
@@ -43,6 +48,7 @@ class MatchSettings {
       serveIndicator: m['serveIndicator'] as bool? ?? false,
       timeout: m['timeout'] as bool? ?? false,
       ballReminder: m['ballReminder'] as bool? ?? false,
+      sideSwitch: m['sideSwitch'] as bool? ?? false,
       liveComments: m['liveComments'] as bool? ?? false,
     );
   }
