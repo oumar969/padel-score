@@ -73,7 +73,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     if (m.completedSets.length > _lastSetCount) {
       _lastSetCount = m.completedSets.length;
       if (m.status == MatchStatus.active) _sideSwitchDismissed = false;
-      _audio.playCelebration();
+      _audio.playCelebration(); // Web Audio API — no await needed
     }
   }
 

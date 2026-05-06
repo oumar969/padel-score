@@ -1,98 +1,43 @@
-import 'dart:math';
-import 'dart:typed_data';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:web/web.dart' as web;
 
 class AudioService {
-  final AudioPlayer _player = AudioPlayer();
-  bool _unlocked = false;
+  web.AudioContext? _ctx;
 
-  /// Call on every user tap to keep AudioContext unlocked on iOS/Safari.
-  Future<void> unlock() async {
-    if (_unlocked) return;
+  /// Call on every user tap to keep AudioContext resumed (Safari/iOS).
+  void unlock() {
     try {
-      // Play a 1-sample silent WAV to unlock the AudioContext
-      final silent = _buildSilentWav();
-      await _player.play(BytesSource(silent));
-      _unlocked = true;
+      _ctx ??= web.AudioContext();
+      _ctx!.resume();
     } catch (_) {}
   }
 
-  Future<void> playCelebration() async {
+  void playCelebration() {
     try {
-      final wav = _buildCelebrationWav();
-      await _player.play(BytesSource(wav));
-    } catch (_) {
-      // Audio failures are non-critical
-    }
+      final ctx = _ctx ?? web.AudioContext();
+      _ctx = ctx;
+      _note(ctx, 523.25, 0.00); // C5
+      _note(ctx, 659.25, 0.15); // E5
+      _note(ctx, 783.99, 0.30); // G5
+      _note(ctx, 1046.5, 0.50); // C6
+    } catch (_) {}
   }
 
-  void dispose() => _player.dispose();
-
-  /// Generates a C5–E5–G5–C6 arpeggio as 16-bit mono PCM WAV bytes.
-  Uint8List _buildCelebrationWav() {
-    const sampleRate = 22050;
-    const noteDuration = 0.13; // seconds per note
-    const noteFadeRatio = 0.3; // fade-out portion of each note
-    final freqs = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
-
-    final samplesPerNote = (sampleRate * noteDuration).round();
-    final totalSamples = samplesPerNote * freqs.length;
-    final samples = Int16List(totalSamples);
-
-    for (var n = 0; n < freqs.length; n++) {
-      final freq = freqs[n];
-      final base = n * samplesPerNote;
-      for (var i = 0; i < samplesPerNote; i++) {
-        final t = i / sampleRate;
-        final progress = i / samplesPerNote;
-        final envelope = progress < (1 - noteFadeRatio)
-            ? 1.0
-            : (1.0 - progress) / noteFadeRatio;
-        final value = (32767 * 0.55 * envelope * sin(2 * pi * freq * t)).round();
-        samples[base + i] = value.clamp(-32767, 32767);
-      }
-    }
-
-    return _encodeWav(samples, sampleRate);
+  void _note(web.AudioContext ctx, double freq, double delay) {
+    final osc = ctx.createOscillator();
+    final gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    final t = ctx.currentTime + delay;
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t);
+    osc.stop(t + 0.32);
   }
 
-  /// 1-sample silent WAV used only to unlock the AudioContext.
-  Uint8List _buildSilentWav() {
-    return _encodeWav(Int16List.fromList([0]), 22050);
-  }
-
-  Uint8List _encodeWav(Int16List samples, int sampleRate) {
-    const channels = 1;
-    const bitsPerSample = 16;
-    final dataBytes = samples.length * 2;
-    final buf = ByteData(44 + dataBytes);
-
-    // RIFF chunk
-    buf
-      ..setUint8(0, 0x52) ..setUint8(1, 0x49) ..setUint8(2, 0x46) ..setUint8(3, 0x46)
-      ..setUint32(4, 36 + dataBytes, Endian.little)
-      ..setUint8(8, 0x57) ..setUint8(9, 0x41) ..setUint8(10, 0x56) ..setUint8(11, 0x45);
-
-    // fmt chunk
-    buf
-      ..setUint8(12, 0x66) ..setUint8(13, 0x6D) ..setUint8(14, 0x74) ..setUint8(15, 0x20)
-      ..setUint32(16, 16, Endian.little)
-      ..setUint16(20, 1, Endian.little)
-      ..setUint16(22, channels, Endian.little)
-      ..setUint32(24, sampleRate, Endian.little)
-      ..setUint32(28, sampleRate * channels * bitsPerSample ~/ 8, Endian.little)
-      ..setUint16(32, channels * bitsPerSample ~/ 8, Endian.little)
-      ..setUint16(34, bitsPerSample, Endian.little);
-
-    // data chunk
-    buf
-      ..setUint8(36, 0x64) ..setUint8(37, 0x61) ..setUint8(38, 0x74) ..setUint8(39, 0x61)
-      ..setUint32(40, dataBytes, Endian.little);
-
-    for (var i = 0; i < samples.length; i++) {
-      buf.setInt16(44 + i * 2, samples[i], Endian.little);
-    }
-
-    return buf.buffer.asUint8List();
+  void dispose() {
+    try { _ctx?.close(); } catch (_) {}
+    _ctx = null;
   }
 }
