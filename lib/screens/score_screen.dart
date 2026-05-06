@@ -942,6 +942,19 @@ class _WinOverlay extends StatelessWidget {
                       fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white38)),
                 )).toList()),
             const SizedBox(height: 56),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/match/${match.id}/analysis'),
+              icon: const Icon(Icons.bar_chart_rounded, size: 18),
+              label: Text('Se analyse',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: team1Color),
+                foregroundColor: team1Color,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(

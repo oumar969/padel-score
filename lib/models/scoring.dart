@@ -23,11 +23,12 @@ PadelMatch awardPoint(PadelMatch match, int team) {
     return match.copyWith(currentGameT1: t1, currentGameT2: t2, matchStartedAt: startedAt);
   }
 
-  // Game won — toggle serve, increment game count
+  // Game won — toggle serve, increment game count, log winner
   final newServingTeam = match.settings.serveIndicator
       ? (match.servingTeam == 1 ? 2 : 1)
       : match.servingTeam;
   final newGamesPlayed = match.totalGamesPlayed + 1;
+  final newGameLog = [...match.gameLog, gameWinner];
 
   final setT1 = match.currentSetT1 + (gameWinner == 1 ? 1 : 0);
   final setT2 = match.currentSetT2 + (gameWinner == 2 ? 1 : 0);
@@ -53,6 +54,7 @@ PadelMatch awardPoint(PadelMatch match, int team) {
       matchStartedAt: startedAt,
       servingTeam: newServingTeam,
       totalGamesPlayed: newGamesPlayed,
+      gameLog: newGameLog,
     );
   }
 
@@ -74,5 +76,6 @@ PadelMatch awardPoint(PadelMatch match, int team) {
     matchStartedAt: startedAt,
     servingTeam: newServingTeam,
     totalGamesPlayed: newGamesPlayed,
+    gameLog: newGameLog,
   );
 }

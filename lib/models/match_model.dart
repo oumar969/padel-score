@@ -35,6 +35,7 @@ class PadelMatch {
   final DateTime? matchStartedAt;
 
   final String? ownerId;
+  final List<int> gameLog; // 1 or 2 for each game won, in order
 
   // Settings & features
   final MatchSettings settings;
@@ -65,6 +66,7 @@ class PadelMatch {
     required this.createdAt,
     this.matchStartedAt,
     this.ownerId,
+    this.gameLog = const [],
     required this.settings,
     required this.servingTeam,
     required this.totalGamesPlayed,
@@ -148,6 +150,7 @@ class PadelMatch {
     int? totalGamesPlayed,
     DateTime? warmupStartedAt,
     DateTime? timeoutStartedAt,
+    List<int>? gameLog,
     bool clearTimeout = false,
     bool clearWarmup = false,
   }) {
@@ -169,6 +172,7 @@ class PadelMatch {
       createdAt: createdAt,
       matchStartedAt: matchStartedAt ?? this.matchStartedAt,
       ownerId: ownerId,
+      gameLog: gameLog ?? this.gameLog,
       settings: settings,
       servingTeam: servingTeam ?? this.servingTeam,
       totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
@@ -196,6 +200,7 @@ class PadelMatch {
         'createdAt': createdAt.toIso8601String(),
         'matchStartedAt': matchStartedAt?.toIso8601String(),
         'ownerId': ownerId,
+        'gameLog': gameLog,
         'settings': settings.toMap(),
         'servingTeam': servingTeam,
         'totalGamesPlayed': totalGamesPlayed,
@@ -228,6 +233,7 @@ class PadelMatch {
           ? DateTime.parse(m['matchStartedAt'] as String)
           : null,
       ownerId: m['ownerId'] as String?,
+      gameLog: (m['gameLog'] as List?)?.cast<int>() ?? const [],
       settings: MatchSettings.fromMap(m['settings'] as Map<String, dynamic>?),
       servingTeam: (m['servingTeam'] as num?)?.toInt() ?? 1,
       totalGamesPlayed: (m['totalGamesPlayed'] as num?)?.toInt() ?? 0,

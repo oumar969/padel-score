@@ -4,6 +4,7 @@ import '../screens/new_match_screen.dart';
 import '../screens/score_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/tv_screen.dart';
+import '../screens/match_analysis_screen.dart';
 
 final router = GoRouter(
   routes: [
@@ -13,6 +14,11 @@ final router = GoRouter(
     GoRoute(
       path: '/match/:id',
       builder: (_, state) => ScoreScreen(matchId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/match/:id/analysis',
+      builder: (_, state) =>
+          MatchAnalysisScreen(matchId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/tv/:id',

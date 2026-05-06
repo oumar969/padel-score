@@ -10,6 +10,7 @@ PadelMatch _newMatch() => PadelMatch.create(
       team2Players: ['Carl', 'Dan'],
       settings: const MatchSettings(serveIndicator: true),
       initialServingTeam: 1,
+      ownerId: 'test-user',
     );
 
 void main() {
