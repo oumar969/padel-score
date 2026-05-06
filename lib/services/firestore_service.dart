@@ -8,9 +8,12 @@ class FirestoreService {
   Stream<List<PadelMatch>> watchMatches(String userId) {
     return _col
         .where('ownerId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => PadelMatch.fromMap(d.id, d.data())).toList());
+        .map((s) {
+          final list = s.docs.map((d) => PadelMatch.fromMap(d.id, d.data())).toList();
+          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        });
   }
 
   Stream<PadelMatch> watchMatch(String id) {
