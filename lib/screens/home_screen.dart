@@ -302,6 +302,19 @@ class _MatchCard extends ConsumerWidget {
               ]),
             ),
           ),
+          if (!isActive)
+            GestureDetector(
+              onTap: () => context.push('/match/${match.id}/analysis'),
+              child: Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: team1Color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.bar_chart_rounded, size: 18, color: team1Color),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Icon(Icons.chevron_right_rounded,
