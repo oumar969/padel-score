@@ -2,7 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /matches/{matchId} {
-      allow read, write: if true;
+      // Alle kan læse en enkelt kamp (nødvendigt for deling og TV-skærm)
+      allow read: if true;
+      // Kun ejeren kan oprette/redigere/slette
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                             && resource.data.ownerId == request.auth.uid;
+
       match /comments/{commentId} {
         allow read, create: if true;
         allow update, delete: if false;

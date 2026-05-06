@@ -7,13 +7,20 @@ import '../models/scoring.dart' as scoring;
 import '../services/firestore_service.dart';
 import '../services/ownership_service.dart';
 import '../services/comments_service.dart';
+import '../services/auth_service.dart';
 
 final firestoreServiceProvider = Provider((_) => FirestoreService());
 final ownershipServiceProvider = Provider((_) => OwnershipService());
 final commentsServiceProvider = Provider((_) => CommentsService());
+final authServiceProvider = Provider((_) => AuthService());
 
-final matchesProvider = StreamProvider<List<PadelMatch>>((ref) {
-  return ref.watch(firestoreServiceProvider).watchMatches();
+final currentUserIdProvider = FutureProvider<String>((ref) {
+  return ref.watch(authServiceProvider).getUserId();
+});
+
+final matchesProvider = StreamProvider<List<PadelMatch>>((ref) async* {
+  final userId = await ref.watch(currentUserIdProvider.future);
+  yield* ref.watch(firestoreServiceProvider).watchMatches(userId);
 });
 
 final matchProvider = StreamProvider.family<PadelMatch, String>((ref, id) {
@@ -79,8 +86,9 @@ class MatchActions {
     MatchSettings settings,
     int initialServingTeam,
   ) async {
+    final userId = await _ref.read(currentUserIdProvider.future);
     final id = await _service.createMatch(
-        format, team1Players, team2Players, settings, initialServingTeam);
+        format, team1Players, team2Players, settings, initialServingTeam, userId);
     await _ref.read(ownershipServiceProvider).claim(id);
     return id;
   }

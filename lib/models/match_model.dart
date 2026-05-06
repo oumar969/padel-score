@@ -34,6 +34,8 @@ class PadelMatch {
   final DateTime createdAt;
   final DateTime? matchStartedAt;
 
+  final String? ownerId;
+
   // Settings & features
   final MatchSettings settings;
   final int servingTeam;        // 1 or 2
@@ -62,6 +64,7 @@ class PadelMatch {
     this.winner,
     required this.createdAt,
     this.matchStartedAt,
+    this.ownerId,
     required this.settings,
     required this.servingTeam,
     required this.totalGamesPlayed,
@@ -165,6 +168,7 @@ class PadelMatch {
       winner: winner ?? this.winner,
       createdAt: createdAt,
       matchStartedAt: matchStartedAt ?? this.matchStartedAt,
+      ownerId: ownerId,
       settings: settings,
       servingTeam: servingTeam ?? this.servingTeam,
       totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
@@ -191,6 +195,7 @@ class PadelMatch {
         'winner': winner,
         'createdAt': createdAt.toIso8601String(),
         'matchStartedAt': matchStartedAt?.toIso8601String(),
+        'ownerId': ownerId,
         'settings': settings.toMap(),
         'servingTeam': servingTeam,
         'totalGamesPlayed': totalGamesPlayed,
@@ -222,6 +227,7 @@ class PadelMatch {
       matchStartedAt: m['matchStartedAt'] != null
           ? DateTime.parse(m['matchStartedAt'] as String)
           : null,
+      ownerId: m['ownerId'] as String?,
       settings: MatchSettings.fromMap(m['settings'] as Map<String, dynamic>?),
       servingTeam: (m['servingTeam'] as num?)?.toInt() ?? 1,
       totalGamesPlayed: (m['totalGamesPlayed'] as num?)?.toInt() ?? 0,
@@ -241,6 +247,7 @@ class PadelMatch {
     required List<String> team2Players,
     required MatchSettings settings,
     required int initialServingTeam,
+    required String ownerId,
   }) =>
       PadelMatch(
         id: id,
@@ -257,6 +264,7 @@ class PadelMatch {
         isTiebreak: false,
         status: MatchStatus.active,
         createdAt: DateTime.now(),
+        ownerId: ownerId,
         settings: settings,
         servingTeam: initialServingTeam,
         totalGamesPlayed: 0,

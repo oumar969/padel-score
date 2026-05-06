@@ -5,8 +5,9 @@ import '../models/match_settings.dart';
 class FirestoreService {
   final _col = FirebaseFirestore.instance.collection('matches');
 
-  Stream<List<PadelMatch>> watchMatches() {
+  Stream<List<PadelMatch>> watchMatches(String userId) {
     return _col
+        .where('ownerId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => PadelMatch.fromMap(d.id, d.data())).toList());
@@ -25,6 +26,7 @@ class FirestoreService {
     List<String> team2Players,
     MatchSettings settings,
     int initialServingTeam,
+    String ownerId,
   ) async {
     final doc = _col.doc();
     final match = PadelMatch.create(
@@ -34,6 +36,7 @@ class FirestoreService {
       team2Players: team2Players,
       settings: settings,
       initialServingTeam: initialServingTeam,
+      ownerId: ownerId,
     );
     await doc.set(match.toMap());
     return doc.id;
