@@ -7,6 +7,7 @@ import '../app/theme.dart';
 import '../models/comment_model.dart';
 import '../models/match_model.dart';
 import '../providers/match_provider.dart';
+import '../services/audio_service.dart';
 
 class ScoreScreen extends ConsumerWidget {
   final String matchId;
@@ -40,6 +41,7 @@ class _ScoreView extends ConsumerStatefulWidget {
 class _ScoreViewState extends ConsumerState<_ScoreView>
     with SingleTickerProviderStateMixin {
   late AnimationController _flash;
+  final _audio = AudioService();
   int? _lastT1, _lastT2;
   bool _ballReminderDismissed = false;
   bool _sideSwitchDismissed = false;
@@ -71,11 +73,12 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     if (m.completedSets.length > _lastSetCount) {
       _lastSetCount = m.completedSets.length;
       if (m.status == MatchStatus.active) _sideSwitchDismissed = false;
+      _audio.playCelebration();
     }
   }
 
   @override
-  void dispose() { _flash.dispose(); super.dispose(); }
+  void dispose() { _flash.dispose(); _audio.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
