@@ -4,6 +4,18 @@ import 'package:audioplayers/audioplayers.dart';
 
 class AudioService {
   final AudioPlayer _player = AudioPlayer();
+  bool _unlocked = false;
+
+  /// Call on every user tap to keep AudioContext unlocked on iOS/Safari.
+  Future<void> unlock() async {
+    if (_unlocked) return;
+    try {
+      // Play a 1-sample silent WAV to unlock the AudioContext
+      final silent = _buildSilentWav();
+      await _player.play(BytesSource(silent));
+      _unlocked = true;
+    } catch (_) {}
+  }
 
   Future<void> playCelebration() async {
     try {
@@ -42,6 +54,11 @@ class AudioService {
     }
 
     return _encodeWav(samples, sampleRate);
+  }
+
+  /// 1-sample silent WAV used only to unlock the AudioContext.
+  Uint8List _buildSilentWav() {
+    return _encodeWav(Int16List.fromList([0]), 22050);
   }
 
   Uint8List _encodeWav(Int16List samples, int sampleRate) {

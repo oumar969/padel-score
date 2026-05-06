@@ -99,6 +99,7 @@ class _ScoreViewState extends ConsumerState<_ScoreView>
     Future<void> onTap(int team) async {
       if (!isOwner || isFinished || match.isInTimeout || match.isInWarmup || match.isPaused) return;
       HapticFeedback.mediumImpact();
+      _audio.unlock(); // keep AudioContext unlocked for celebration sound
       await actions.awardPoint(match, team);
     }
 
