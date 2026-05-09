@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const bgColor = Color(0xFF080810);
-const surfaceColor = Color(0xFF111120);
-const cardColor = Color(0xFF181828);
-const dividerColor = Color(0xFF2A2A40);
+const bgColor = Color(0xFF07070F);
+const surfaceColor = Color(0xFF0F0F1C);
+const cardColor = Color(0xFF141424);
+const dividerColor = Color(0xFF252540);
 
-const team1Color = Color(0xFF4C8EFF);
+const team1Color = Color(0xFF5B9FFF);
 const team1Dark = Color(0xFF1A3A80);
-const team2Color = Color(0xFFFF5C5C);
+const team2Color = Color(0xFFFF5A5A);
 const team2Dark = Color(0xFF801A1A);
 
+const accentGreen = Color(0xFF3DFFA0);
 const goldColor = Color(0xFFFFD700);
 
 ThemeData buildTheme() {

@@ -270,78 +270,171 @@ class _MatchCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isActive = match.status == MatchStatus.active;
+    final t1Won = match.winner == 1;
+    final t2Won = match.winner == 2;
 
     return GestureDetector(
       onTap: () => context.push('/match/${match.id}'),
       onLongPress: () => _confirmDelete(context, ref),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: dividerColor),
-        ),
-        child: Row(children: [
-          Container(
-            width: 4, height: 80,
-            decoration: BoxDecoration(
-              color: isActive ? team1Color : Colors.white24,
-              borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(20)),
-            ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isActive
+                ? team1Color.withValues(alpha: 0.35)
+                : dividerColor,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                      '${match.team1Name}  ·  ${match.team2Name}',
-                      style: GoogleFonts.inter(
-                          fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (!isActive && match.winner != null)
-                    Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(
-                        match.winner == 1 ? match.team1Name : match.team2Name,
-                        style: GoogleFonts.inter(
-                            fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white54),
+          boxShadow: isActive
+              ? [BoxShadow(
+                  color: team1Color.withValues(alpha: 0.10),
+                  blurRadius: 24, spreadRadius: 0, offset: const Offset(0, 4))]
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Column(children: [
+            // ── Team row ──────────────────────────────────────
+            IntrinsicHeight(
+              child: Row(children: [
+                // Team 1
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 10, 18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          team1Color.withValues(alpha: t1Won ? 0.18 : 0.08),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
                     ),
-                ]),
-                const SizedBox(height: 6),
-                _ScoreSummary(match: match),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(match.team1Name,
+                            style: GoogleFonts.inter(
+                              fontSize: 15, fontWeight: FontWeight.w700,
+                              color: t1Won ? Colors.white : Colors.white70,
+                            ),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        if (t1Won) ...[
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: team1Color.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('Vinder 🏆',
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, fontWeight: FontWeight.w700,
+                                    color: team1Color)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // Score center
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  child: _SetScore(match: match),
+                ),
+                // Team 2
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 18, 16, 18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          team2Color.withValues(alpha: t2Won ? 0.18 : 0.08),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(match.team2Name,
+                            style: GoogleFonts.inter(
+                              fontSize: 15, fontWeight: FontWeight.w700,
+                              color: t2Won ? Colors.white : Colors.white70,
+                            ),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end),
+                        if (t2Won) ...[
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: team2Color.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('Vinder 🏆',
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, fontWeight: FontWeight.w700,
+                                    color: team2Color)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               ]),
             ),
-          ),
-          if (!isActive)
-            GestureDetector(
-              onTap: () => context.push('/match/${match.id}/analysis'),
-              child: Container(
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: team1Color.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.bar_chart_rounded, size: 18, color: team1Color),
+            // ── Bottom bar ────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: dividerColor, width: 0.8)),
               ),
+              child: Row(children: [
+                if (isActive) ...[
+                  _PulseDot(),
+                  const SizedBox(width: 6),
+                  Text('LIVE', style: GoogleFonts.inter(
+                    fontSize: 11, fontWeight: FontWeight.w800,
+                    color: team1Color, letterSpacing: 1.5,
+                  )),
+                ] else
+                  Text('AFSLUTTET', style: GoogleFonts.inter(
+                    fontSize: 11, fontWeight: FontWeight.w600,
+                    color: Colors.white24, letterSpacing: 1.2,
+                  )),
+                const Spacer(),
+                if (!isActive)
+                  GestureDetector(
+                    onTap: () => context.push('/match/${match.id}/analysis'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: team1Color.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.bar_chart_rounded, size: 14, color: team1Color),
+                        const SizedBox(width: 5),
+                        Text('Analyse', style: GoogleFonts.inter(
+                          fontSize: 11, fontWeight: FontWeight.w700, color: team1Color,
+                        )),
+                      ]),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded,
+                    color: Colors.white.withValues(alpha: 0.2), size: 20),
+              ]),
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Icon(Icons.chevron_right_rounded,
-                color: Colors.white.withValues(alpha: 0.2), size: 22),
-          ),
-        ]),
+          ]),
+        ),
       ),
     );
   }
@@ -369,25 +462,51 @@ class _MatchCard extends ConsumerWidget {
   }
 }
 
-class _ScoreSummary extends StatelessWidget {
+class _SetScore extends StatelessWidget {
   final PadelMatch match;
-  const _ScoreSummary({required this.match});
+  const _SetScore({required this.match});
 
   @override
   Widget build(BuildContext context) {
-    final parts = [
-      ...match.completedSets.map((s) => '${s.t1}-${s.t2}'),
+    final sets = [
+      ...match.completedSets.map((s) => (s.t1, s.t2)),
       if (match.status == MatchStatus.active)
-        '${match.currentSetT1}-${match.currentSetT2}',
+        (match.currentSetT1, match.currentSetT2),
     ];
-    if (parts.isEmpty) {
-      return Text('Ikke startet',
-          style: GoogleFonts.inter(fontSize: 13, color: Colors.white30));
+
+    if (sets.isEmpty) {
+      return Text('–', style: GoogleFonts.inter(
+          fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white24));
     }
-    return Text(parts.join('   '),
-        style: GoogleFonts.inter(
-            fontSize: 14, fontWeight: FontWeight.w600,
-            color: Colors.white38, letterSpacing: 0.5));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: sets.map((s) {
+        final t1Leads = s.$1 > s.$2;
+        final t2Leads = s.$2 > s.$1;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text('${s.$1}',
+                style: GoogleFonts.inter(
+                  fontSize: 17, fontWeight: FontWeight.w800,
+                  color: t1Leads ? team1Color : Colors.white38,
+                )),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text('–',
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: Colors.white24, fontWeight: FontWeight.w600)),
+            ),
+            Text('${s.$2}',
+                style: GoogleFonts.inter(
+                  fontSize: 17, fontWeight: FontWeight.w800,
+                  color: t2Leads ? team2Color : Colors.white38,
+                )),
+          ]),
+        );
+      }).toList(),
+    );
   }
 }
 
