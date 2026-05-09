@@ -69,22 +69,53 @@ class _NewMatchScreenState extends ConsumerState<NewMatchScreen> {
               _label('FORMAT'),
               const SizedBox(height: 10),
               Row(children: [
-                _FormatChip(label: '1v1', selected: _format == '1v1',
-                    onTap: () => setState(() => _format = '1v1')),
+                Expanded(child: _FormatChip(
+                  label: '1v1', icon: Icons.person_rounded,
+                  subtitle: 'Enkeltmatch',
+                  selected: _format == '1v1',
+                  onTap: () => setState(() => _format = '1v1'),
+                )),
                 const SizedBox(width: 10),
-                _FormatChip(label: '2v2', selected: _format == '2v2',
-                    onTap: () => setState(() => _format = '2v2')),
+                Expanded(child: _FormatChip(
+                  label: '2v2', icon: Icons.group_rounded,
+                  subtitle: 'Dobbeltmatch',
+                  selected: _format == '2v2',
+                  onTap: () => setState(() => _format = '2v2'),
+                )),
               ]),
 
               const SizedBox(height: 28),
 
               // Teams
               _teamSection('HOLD 1', team1Color, _t1, _count),
-              const SizedBox(height: 16),
-              Center(child: Text('VS', style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.w800,
-                letterSpacing: 3, color: Colors.white24))),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // VS divider
+              Row(children: [
+                Expanded(child: Divider(color: team1Color.withValues(alpha: 0.25), thickness: 1)),
+                const SizedBox(width: 12),
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [team1Color, team2Color],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: team1Color.withValues(alpha: 0.3), blurRadius: 12),
+                    ],
+                  ),
+                  child: Center(child: Text('VS', style: GoogleFonts.inter(
+                      fontSize: 11, fontWeight: FontWeight.w900,
+                      letterSpacing: 1, color: Colors.white))),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Divider(color: team2Color.withValues(alpha: 0.25), thickness: 1)),
+              ]),
+
+              const SizedBox(height: 14),
               _teamSection('HOLD 2', team2Color, _t2, _count),
 
               const SizedBox(height: 32),
@@ -103,7 +134,42 @@ class _NewMatchScreenState extends ConsumerState<NewMatchScreen> {
 
               _loading
                   ? const Center(child: CircularProgressIndicator(color: team1Color))
-                  : ElevatedButton(onPressed: _start, child: const Text('Start kamp')),
+                  : Container(
+                      width: double.infinity,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [team1Color, Color(0xFF3A7AE4)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: team1Color.withValues(alpha: 0.35),
+                            blurRadius: 20, offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _start,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Center(
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.sports_tennis_rounded,
+                                  color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Text('Start kamp', style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              )),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    ),
               const SizedBox(height: 8),
             ],
           ),
@@ -295,9 +361,14 @@ class _ServerPicker extends StatelessWidget {
 
 class _FormatChip extends StatelessWidget {
   final String label;
+  final String subtitle;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  const _FormatChip({required this.label, required this.selected, required this.onTap});
+  const _FormatChip({
+    required this.label, required this.subtitle, required this.icon,
+    required this.selected, required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,15 +376,35 @@ class _FormatChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: selected ? team1Color : cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? team1Color : dividerColor),
+          color: selected ? team1Color.withValues(alpha: 0.12) : cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? team1Color : dividerColor,
+            width: selected ? 1.5 : 1,
+          ),
+          boxShadow: selected
+              ? [BoxShadow(color: team1Color.withValues(alpha: 0.15), blurRadius: 16)]
+              : null,
         ),
-        child: Text(label, style: GoogleFonts.inter(
-            fontSize: 16, fontWeight: FontWeight.w800,
-            color: selected ? Colors.white : Colors.white38)),
+        child: Row(children: [
+          Icon(icon,
+              size: 22,
+              color: selected ? team1Color : Colors.white30),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: GoogleFonts.inter(
+                fontSize: 16, fontWeight: FontWeight.w800,
+                color: selected ? Colors.white : Colors.white54)),
+            Text(subtitle, style: GoogleFonts.inter(
+                fontSize: 11, color: selected ? team1Color : Colors.white24)),
+          ]),
+          if (selected) ...[
+            const Spacer(),
+            Icon(Icons.check_circle_rounded, size: 18, color: team1Color),
+          ],
+        ]),
       ),
     );
   }

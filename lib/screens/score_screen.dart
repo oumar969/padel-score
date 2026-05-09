@@ -278,107 +278,166 @@ class _TeamPanel extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: isT1 ? Alignment.centerRight : Alignment.centerLeft,
-              end: isT1 ? Alignment.centerLeft : Alignment.centerRight,
-              colors: [darkColor.withValues(alpha: 0.35), bgColor],
+              begin: isT1 ? Alignment.centerLeft : Alignment.centerRight,
+              end: isT1 ? Alignment.centerRight : Alignment.centerLeft,
+              colors: isWinning
+                  ? [color.withValues(alpha: 0.18), bgColor]
+                  : [darkColor.withValues(alpha: 0.28), bgColor],
             ),
           ),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            // Serve indicator
-            if (isServing)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Stack(children: [
+            // Edge glow when winning
+            if (isWinning)
+              Positioned(
+                top: 0, bottom: 0,
+                left: isT1 ? 0 : null,
+                right: isT1 ? null : 0,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 3,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
+                    color: color,
+                    boxShadow: [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 12)],
+                  ),
+                ),
+              ),
+
+            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              // Serve indicator
+              if (isServing)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 12)],
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Text('🎾', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Text('SERVE', style: GoogleFonts.inter(
+                          fontSize: 14, fontWeight: FontWeight.w800,
+                          letterSpacing: 2, color: color)),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          (match.currentGameT1 + match.currentGameT2) % 2 == 0 ? 'D' : 'Ad',
+                          style: GoogleFonts.inter(
+                              fontSize: 12, fontWeight: FontWeight.w800, color: color),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+
+              // Team name
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(name.toUpperCase(),
+                  textAlign: TextAlign.center, maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                      fontSize: 12, fontWeight: FontWeight.w800,
+                      letterSpacing: 2, color: color)),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Score
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, anim) => ScaleTransition(
+                  scale: Tween<double>(begin: 0.75, end: 1).animate(
+                      CurvedAnimation(parent: anim, curve: Curves.elasticOut)),
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+                child: Text(score, key: ValueKey('$team-$score'),
+                  style: GoogleFonts.inter(
+                    fontSize: 108, fontWeight: FontWeight.w900,
+                    letterSpacing: -4, height: 1,
+                    color: hasAdv
+                        ? color
+                        : isWinning
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.45),
+                    shadows: [
+                      if (hasAdv || isWinning)
+                        Shadow(
+                          color: color.withValues(alpha: hasAdv ? 0.6 : 0.25),
+                          blurRadius: hasAdv ? 32 : 16,
+                        ),
+                    ],
+                  )),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Set dots
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                for (int i = 0; i < 2; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: i < sets ? 28 : 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: i < sets ? color : Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: i < sets
+                          ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6)]
+                          : null,
+                    ),
+                  ),
+              ]),
+
+              const SizedBox(height: 28),
+
+              if (match.status == MatchStatus.active)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isOwner
+                        ? color.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+                    border: Border.all(
+                      color: isOwner
+                          ? color.withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.06),
+                    ),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('🎾', style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 8),
-                    Text('SERVE', style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w800,
-                        letterSpacing: 2, color: color)),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        (match.currentGameT1 + match.currentGameT2) % 2 == 0 ? 'D' : 'Ad',
-                        style: GoogleFonts.inter(
-                            fontSize: 12, fontWeight: FontWeight.w800, color: color),
-                      ),
+                    Icon(
+                      isOwner ? Icons.touch_app_rounded : Icons.visibility_outlined,
+                      size: 13,
+                      color: isOwner ? color.withValues(alpha: 0.7) : Colors.white24,
                     ),
+                    const SizedBox(width: 5),
+                    Text(isOwner ? 'TAP FOR POINT' : 'TILSKUER',
+                        style: GoogleFonts.inter(
+                          fontSize: 10, fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          color: isOwner ? color.withValues(alpha: 0.7) : Colors.white24,
+                        )),
                   ]),
                 ),
-              ),
-
-            // Team name
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(name.toUpperCase(),
-                textAlign: TextAlign.center, maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w700,
-                    letterSpacing: 2, color: color.withValues(alpha: 0.8))),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Score
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              transitionBuilder: (child, anim) => ScaleTransition(
-                scale: Tween<double>(begin: 0.75, end: 1).animate(
-                    CurvedAnimation(parent: anim, curve: Curves.elasticOut)),
-                child: FadeTransition(opacity: anim, child: child),
-              ),
-              child: Text(score, key: ValueKey('$team-$score'),
-                style: GoogleFonts.inter(
-                  fontSize: 108, fontWeight: FontWeight.w900,
-                  letterSpacing: -4, height: 1,
-                  color: hasAdv ? color : isWinning ? Colors.white : Colors.white.withValues(alpha: 0.55),
-                  shadows: hasAdv ? [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 30)] : null,
-                )),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Set dots
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              for (int i = 0; i < 2; i++)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: i < sets ? 24 : 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: i < sets ? color : Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                ),
             ]),
-
-            const SizedBox(height: 28),
-
-            if (match.status == MatchStatus.active)
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(isOwner ? Icons.touch_app_rounded : Icons.visibility_rounded,
-                    size: 14, color: color.withValues(alpha: 0.25)),
-                const SizedBox(width: 4),
-                Text(isOwner ? 'TAP' : 'TILSKUER', style: GoogleFonts.inter(
-                    fontSize: 11, fontWeight: FontWeight.w700,
-                    letterSpacing: 2, color: color.withValues(alpha: 0.25))),
-              ]),
           ]),
         ),
       ),
